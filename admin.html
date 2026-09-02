@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — 유숙형 Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --paper:#FFFFFF; --ink:#0E0E0C; --ink-soft:#6A6A64; --hair:rgba(14,14,12,0.15); }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:var(--paper); color:var(--ink); font-family:'Pretendard', -apple-system, sans-serif; -webkit-font-smoothing:antialiased; }
+
+  header{ position:sticky; top:0; z-index:20; background:rgba(255,255,255,0.96); backdrop-filter:blur(6px); border-bottom:1px solid var(--hair); padding:18px 32px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .wordmark{ font-family:'Newsreader', serif; font-style:italic; font-size:17px; }
+  .header-actions{ display:flex; gap:10px; align-items:center; }
+  .btn{ font-family:'Pretendard',sans-serif; font-size:13px; padding:8px 14px; border:1px solid var(--ink); background:#fff; color:var(--ink); cursor:pointer; }
+  .btn:hover{ background:var(--ink); color:#fff; }
+  .btn.primary{ background:var(--ink); color:#fff; }
+  .btn.primary:hover{ opacity:0.8; background:var(--ink); }
+  .file-label{ font-size:13px; color:var(--ink-soft); cursor:pointer; text-decoration:underline; }
+  #fileInput{ display:none; }
+
+  .notice{ max-width:920px; margin:20px auto 0; padding:12px 16px; font-size:13px; color:var(--ink-soft); border:1px solid var(--hair); }
+
+  main{ max-width:920px; margin:0 auto; padding:20px 32px 140px; }
+
+  .tabs{ display:flex; gap:0; border-bottom:1px solid var(--hair); margin:30px 0 34px; flex-wrap:wrap; }
+  .tabs button{ background:none; border:none; font-family:'Pretendard',sans-serif; font-size:14px; color:var(--ink-soft); padding:10px 16px; cursor:pointer; position:relative; }
+  .tabs button.active{ color:var(--ink); }
+  .tabs button.active::after{ content:""; position:absolute; left:16px; right:16px; bottom:-1px; height:2px; background:var(--ink); }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  h2.sub{ font-family:'Newsreader',serif; font-style:italic; font-size:17px; margin:36px 0 14px; padding-top:18px; border-top:1px solid var(--hair); }
+  h2.sub:first-child{ margin-top:0; border-top:none; padding-top:0; }
+
+  .cv-cols{ display:grid; grid-template-columns:1fr 1fr; gap:36px; }
+
+  .field-row{ display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+  .field-row label{ font-size:12px; color:var(--ink-soft); }
+  .field-row input, .field-row textarea{
+    font-family:'Pretendard',sans-serif; font-size:14px; padding:8px 10px; border:1px solid var(--hair);
+    background:#fff; color:var(--ink); width:100%;
+  }
+  .field-row textarea{ resize:vertical; min-height:44px; }
+  .field-row input:focus, .field-row textarea:focus{ outline:none; border-color:var(--ink); }
+
+  .list-row{ border:1px solid var(--hair); padding:14px; margin-bottom:10px; position:relative; }
+  .list-row .grid2{ display:grid; grid-template-columns:100px 1fr; gap:10px; }
+  .list-row .grid-work{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .remove-btn{ position:absolute; top:10px; right:10px; background:none; border:none; font-size:12px; color:var(--ink-soft); cursor:pointer; }
+  .remove-btn:hover{ color:#b3372c; }
+  .add-btn{ font-size:13px; color:var(--ink-soft); background:none; border:1px dashed var(--hair); padding:8px 14px; cursor:pointer; width:100%; text-align:center; margin-top:6px; }
+  .add-btn:hover{ color:var(--ink); border-color:var(--ink); }
+
+  .thumb-slot{ display:flex; gap:12px; align-items:flex-start; }
+  .thumb-slot .prev{ width:64px; height:80px; border:1px solid var(--hair); background-size:cover; background-position:center; flex:0 0 auto; background-repeat:no-repeat; }
+  .thumb-slot .prev.empty{ background:repeating-linear-gradient(135deg, transparent, transparent 6px, var(--hair) 6px, var(--hair) 7px); }
+
+  .year-select{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:20px; }
+  .year-select button{ font-size:12px; padding:6px 10px; border:1px solid var(--hair); background:#fff; color:var(--ink-soft); cursor:pointer; }
+  .year-select button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  #loginGate{ max-width:340px; margin:120px auto; display:flex; flex-direction:column; gap:12px; }
+  #loginGate h2{ font-family:'Newsreader',serif; font-style:italic; font-size:20px; margin:0 0 10px; }
+  #loginGate input{ font-family:'Pretendard',sans-serif; font-size:14px; padding:10px; border:1px solid var(--hair); }
+  #loginGate .err{ font-size:12.5px; color:#b3372c; min-height:16px; }
+  #appRoot{ display:none; }
+
+  .upload-slot{ display:flex; align-items:center; gap:10px; }
+  .upload-slot input[type=file]{ font-size:12.5px; }
+  .upload-status{ font-size:12px; color:var(--ink-soft); }
+  .img-chip{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--hair); padding:4px 8px; font-size:12px; margin:0 6px 6px 0; }
+  .img-chip button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:12px; }
+  .img-chip button:hover{ color:#b3372c; }
+  .img-chip-wrap{ display:flex; flex-wrap:wrap; margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <h2>관리자 로그인</h2>
+  <input type="email" id="loginEmail" placeholder="이메일">
+  <input type="password" id="loginPassword" placeholder="비밀번호">
+  <button class="btn primary" onclick="doLogin()">로그인</button>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="appRoot">
+
+<header>
+  <span class="wordmark">유숙형 — Admin</span>
+  <div class="header-actions">
+    <span class="upload-status" id="saveStatus"></span>
+    <button class="btn" onclick="downloadBackup()">로컬 백업 다운로드</button>
+    <button class="btn primary" onclick="saveToSupabase()">Supabase에 저장</button>
+    <button class="btn" onclick="doLogout()">로그아웃</button>
+  </div>
+</header>
+
+  <div class="notice">
+    admin에서 내용을 고치고 <b>Supabase에 저장</b>을 누르면 즉시 사이트에 반영됩니다. GitHub에 data.json을 다시 올릴 필요가 없습니다.
+    이미지 파일명 칸에는 저장소에 같이 올린 이미지 파일 경로(예: <code>images/holy-simulator.jpg</code>)를 입력하면 실제 이미지로 표시됩니다. 비워두면 자리표시 박스가 나타납니다.
+  </div>
+
+<main>
+  <div class="tabs" id="tabs">
+    <button data-t="about" class="active">About</button>
+    <button data-t="work">Work</button>
+    <button data-t="exhibitions">Exhibitions</button>
+    <button data-t="text">Text</button>
+    <button data-t="contact">Contact</button>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="panel active" id="panel-about">
+    <div class="cv-cols">
+      <div>
+        <h2 class="sub">한국어</h2>
+        <div id="cv-kr"></div>
+      </div>
+      <div>
+        <h2 class="sub">English</h2>
+        <div id="cv-en"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORK -->
+  <div class="panel" id="panel-work">
+    <div class="year-select" id="workYearSelect"></div>
+    <div id="workItems"></div>
+    <button class="add-btn" onclick="addWorkItem()">+ 이 연도에 작업 추가</button>
+  </div>
+
+  <!-- EXHIBITIONS -->
+  <div class="panel" id="panel-exhibitions">
+    <div id="exItems"></div>
+    <button class="add-btn" onclick="addExhibition()">+ 전시 추가</button>
+  </div>
+
+  <!-- TEXT -->
+  <div class="panel" id="panel-text">
+    <div id="textItems"></div>
+    <button class="add-btn" onclick="addTextItem()">+ 글 추가</button>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="panel" id="panel-contact">
+    <div class="field-row">
+      <label>이메일</label>
+      <input id="contactEmail" placeholder="example@email.com" oninput="state.contact.email = this.value">
+    </div>
+    <div class="field-row">
+      <label>인스타그램 링크</label>
+      <input id="contactIG" placeholder="https://instagram.com/아이디" oninput="state.contact.instagram = this.value">
+    </div>
+  </div>
+
+</main>
+
+</div>
+
+<script>
+  // ---- Supabase 설정 : 아래 두 값을 본인 프로젝트 값으로 채워넣기 ----
+  var SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  var SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
+  var BUCKET = 'portfolio-images';
+
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function doLogin(){
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value;
+    var errEl = document.getElementById('loginErr');
+    errEl.textContent = '';
+    sb.auth.signInWithPassword({ email:email, password:password }).then(function(res){
+      if(res.error){ errEl.textContent = '로그인 실패: ' + res.error.message; return; }
+      showApp();
+    });
+  }
+  function doLogout(){
+    sb.auth.signOut().then(function(){ location.reload(); });
+  }
+  function showApp(){
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('appRoot').style.display = 'block';
+    boot();
+  }
+  sb.auth.getSession().then(function(res){
+    if(res.data.session){ showApp(); }
+  });
+
+  function signedUrl(path){
+    if(!path) return Promise.resolve(null);
+    return sb.storage.from(BUCKET).createSignedUrl(path, 3600).then(function(res){
+      if(res.error){ console.error(res.error); return null; }
+      return res.data.signedUrl;
+    });
+  }
+  function uploadFile(file, folder){
+    var path = folder + '/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.\-_]/g,'_');
+    return sb.storage.from(BUCKET).upload(path, file, { upsert:true }).then(function(res){
+      if(res.error){ throw res.error; }
+      return path;
+    });
+  }
+
+  var YEARS = [2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
+  var currentWorkYear = 2026;
+
+  var DEFAULT_STATE = {
+    about: {
+      kr: { name:"유숙형", sub:"［　　출생년도 · 거주지 입력　　］",
+        education:[{year:"현재",text:"고려대학교 대학원 조형문화예술학과 석사과정 · 석사 학위논문 심사 통과"},{year:"",text:"［　　학부 학력 추가 예정　　］"}],
+        solo:[{year:"2026",text:"《Fate Hunter》 (예정) · 장소 확정 예정, 서울, 대한민국"}],
+        group:[{year:"",text:"［　　단체전 이력 추가 예정　　］"}],
+        awards:[{year:"",text:"［　　수상 이력이 있으면 추가　　］"}],
+        collections:[{year:"",text:"［　　소장처가 있으면 추가　　］"}] },
+      en: { name:"Sukhyung Yu", sub:"［　　Year and city of birth, based in　　］",
+        education:[{year:"Present",text:"M.A. candidate, Dept. of Culture & Arts, Korea University, Seoul · Master's thesis defended"},{year:"",text:"［　　undergraduate education to be added　　］"}],
+        solo:[{year:"2026",text:"\"Fate Hunter\" (forthcoming) · venue TBC, Seoul, KR"}],
+        group:[{year:"",text:"［　　to be added　　］"}],
+        awards:[{year:"",text:"［　　to be added if applicable　　］"}],
+        collections:[{year:"",text:"［　　to be added if applicable　　］"}] }
+    },
+    work: (function(){ var w={}; YEARS.forEach(function(y){ w[y]=[]; }); w[2026]=[
+      {name:"유숙형",title:"Untitled (팔란티어 바다)",year:"2026",medium:"리넨에 유채",size:"480 × 145 cm",image:""},
+      {name:"유숙형",title:"Eye Grid",year:"2026",medium:"리넨에 유채",size:"45 × 45 cm (each, 3×3)",image:""}
+    ]; return w; })(),
+    exhibitions: [
+      {id:"fate-hunter",year:"2026",title:"《Fate Hunter》",status:"예정 · 11월",venue:"첫 개인전 · 장소 확정 예정, 서울",images:[]},
+      {id:"placeholder-1",year:"",title:"［　　이전 단체전이 확정되면 목록에 추가　　］",status:"",venue:"",images:[]}
+    ],
+    text: [
+      {title:"석사 학위논문 제목 추가 예정", year:"2026"},
+      {title:"비평문 · 인터뷰가 있으면 추가", year:"—"}
+    ],
+    contact: { email:"", instagram:"" }
+  };
+
+  var state = null;
+
+  var CV_LABELS = {
+    education:{kr:'학력', en:'Education'},
+    solo:{kr:'주요 개인전', en:'Selected Solo Exhibitions'},
+    group:{kr:'주요 단체전', en:'Selected Group Exhibitions'},
+    awards:{kr:'수상', en:'Awards'},
+    collections:{kr:'소장처', en:'Collections'}
+  };
+  var CV_ORDER = ['education','solo','group','awards','collections'];
+
+  function renderAll(){
+    renderCV('kr'); renderCV('en');
+    renderWorkYearSelect(); renderWorkItems();
+    renderExhibitions();
+    renderTextItems();
+    document.getElementById('contactEmail').value = state.contact.email || '';
+    document.getElementById('contactIG').value = state.contact.instagram || '';
+  }
+
+  function renderCV(lang){
+    var col = state.about[lang];
+    var wrap = document.getElementById('cv-' + lang);
+    wrap.innerHTML = '';
+
+    var nameRow = document.createElement('div');
+    nameRow.className = 'field-row';
+    nameRow.innerHTML = '<label>이름</label><input value="' + esc(col.name) + '">';
+    nameRow.querySelector('input').oninput = function(){ col.name = this.value; };
+    wrap.appendChild(nameRow);
+
+    var subRow = document.createElement('div');
+    subRow.className = 'field-row';
+    subRow.innerHTML = '<label>출생/거주 정보</label><input value="' + esc(col.sub) + '">';
+    subRow.querySelector('input').oninput = function(){ col.sub = this.value; };
+    wrap.appendChild(subRow);
+
+    CV_ORDER.forEach(function(key){
+      var h = document.createElement('h2');
+      h.className = 'sub';
+      h.textContent = CV_LABELS[key][lang];
+      wrap.appendChild(h);
+
+      col[key].forEach(function(row, idx){
+        wrap.appendChild(buildCVRow(col[key], row, idx));
+      });
+
+      var addBtn = document.createElement('button');
+      addBtn.className = 'add-btn';
+      addBtn.textContent = '+ 항목 추가';
+      addBtn.onclick = function(){ col[key].push({year:'', text:''}); renderCV(lang); };
+      wrap.appendChild(addBtn);
+    });
+  }
+
+  function buildCVRow(arr, row, idx){
+    var div = document.createElement('div');
+    div.className = 'list-row';
+    div.innerHTML =
+      '<button class="remove-btn">삭제</button>' +
+      '<div class="grid2">' +
+        '<div class="field-row"><label>연도</label><input class="yr-in" value="' + esc(row.year) + '"></div>' +
+        '<div class="field-row"><label>내용</label><input class="txt-in" value="' + esc(row.text) + '"></div>' +
+      '</div>';
+    div.querySelector('.yr-in').oninput = function(){ row.year = this.value; };
+    div.querySelector('.txt-in').oninput = function(){ row.text = this.value; };
+    div.querySelector('.remove-btn').onclick = function(){ arr.splice(idx,1); renderCV(div.closest('.cv-cols') ? (div.closest('div').id.indexOf('en')>-1?'en':'kr') : 'kr'); renderAll(); };
+    return div;
+  }
+
+  function renderWorkYearSelect(){
+    var wrap = document.getElementById('workYearSelect');
+    wrap.innerHTML = '';
+    YEARS.forEach(function(y){
+      var btn = document.createElement('button');
+      btn.textContent = y;
+      if(y === currentWorkYear) btn.classList.add('active');
+      btn.onclick = function(){ currentWorkYear = y; renderWorkYearSelect(); renderWorkItems(); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderWorkItems(){
+    var wrap = document.getElementById('workItems');
+    wrap.innerHTML = '';
+    var items = state.work[currentWorkYear];
+    items.forEach(function(w, idx){
+      var div = document.createElement('div');
+      div.className = 'list-row';
+      div.innerHTML =
+        '<button class="remove-btn">삭제</button>' +
+        '<div class="thumb-slot">' +
+          '<div class="prev empty" id="prev-work-' + idx + '"></div>' +
+          '<div style="flex:1">' +
+            '<div class="grid-work">' +
+              '<div class="field-row"><label>작가명</label><input class="f-name" value="' + esc(w.name) + '"></div>' +
+              '<div class="field-row"><label>작품명</label><input class="f-title" value="' + esc(w.title) + '"></div>' +
+              '<div class="field-row"><label>연도</label><input class="f-year" value="' + esc(w.year) + '"></div>' +
+              '<div class="field-row"><label>재료</label><input class="f-medium" value="' + esc(w.medium) + '"></div>' +
+            '</div>' +
+            '<div class="field-row"><label>사이즈</label><input class="f-size" value="' + esc(w.size) + '"></div>' +
+            '<div class="field-row"><label>이미지</label>' +
+              '<div class="upload-slot">' +
+                '<input type="file" accept="image/*" class="f-image-file">' +
+                '<span class="upload-status" id="stat-work-' + idx + '">' + (w.image ? '업로드됨' : '') + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      div.querySelector('.f-name').oninput = function(){ w.name = this.value; };
+      div.querySelector('.f-title').oninput = function(){ w.title = this.value; };
+      div.querySelector('.f-year').oninput = function(){ w.year = this.value; };
+      div.querySelector('.f-medium').oninput = function(){ w.medium = this.value; };
+      div.querySelector('.f-size').oninput = function(){ w.size = this.value; };
+      div.querySelector('.f-image-file').onchange = function(e){
+        var file = e.target.files[0];
+        if(!file) return;
+        var statEl = document.getElementById('stat-work-' + idx);
+        statEl.textContent = '업로드 중...';
+        uploadFile(file, 'work/' + currentWorkYear).then(function(path){
+          w.image = path;
+          statEl.textContent = '업로드 완료';
+          updatePreview('prev-work-' + idx, path);
+        }).catch(function(err){
+          statEl.textContent = '업로드 실패';
+          alert('업로드 실패: ' + err.message);
+        });
+      };
+      div.querySelector('.remove-btn').onclick = function(){ items.splice(idx,1); renderWorkItems(); };
+      wrap.appendChild(div);
+      updatePreview('prev-work-' + idx, w.image);
+    });
+    if(!items.length){
+      var p = document.createElement('p');
+      p.style.cssText = 'font-size:13px;color:var(--ink-soft);font-style:italic;';
+      p.textContent = currentWorkYear + '년에 등록된 작업이 없습니다.';
+      wrap.appendChild(p);
+    }
+  }
+  function updatePreview(elId, path){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    if(!path){ el.classList.add('empty'); el.style.backgroundImage = ''; return; }
+    signedUrl(path).then(function(url){
+      if(!url) return;
+      el.classList.remove('empty');
+      el.style.backgroundImage = "url('" + url + "')";
+    });
+  }
+  function addWorkItem(){
+    state.work[currentWorkYear].push({name:'유숙형', title:'', year:String(currentWorkYear), medium:'', size:'', image:''});
+    renderWorkItems();
+  }
+
+  function renderExhibitions(){
+    var wrap = document.getElementById('exItems');
+    wrap.innerHTML = '';
+    state.exhibitions.forEach(function(ex, idx){
+      var div = document.createElement('div');
+      div.className = 'list-row';
+      div.innerHTML =
+        '<button class="remove-btn">삭제</button>' +
+        '<div class="grid-work">' +
+          '<div class="field-row"><label>연도</label><input class="e-year" value="' + esc(ex.year) + '"></div>' +
+          '<div class="field-row"><label>상태 라벨 (예: 예정 · 11월)</label><input class="e-status" value="' + esc(ex.status) + '"></div>' +
+        '</div>' +
+        '<div class="field-row"><label>전시명</label><input class="e-title" value="' + esc(ex.title) + '"></div>' +
+        '<div class="field-row"><label>장소/설명</label><input class="e-venue" value="' + esc(ex.venue) + '"></div>' +
+        '<div class="field-row"><label>전시전경 이미지 추가</label>' +
+          '<input type="file" accept="image/*" multiple class="e-image-file">' +
+          '<span class="upload-status" id="stat-ex-' + idx + '"></span>' +
+          '<div class="img-chip-wrap" id="chips-ex-' + idx + '"></div>' +
+        '</div>';
+      div.querySelector('.e-year').oninput = function(){ ex.year = this.value; };
+      div.querySelector('.e-status').oninput = function(){ ex.status = this.value; };
+      div.querySelector('.e-title').oninput = function(){ ex.title = this.value; };
+      div.querySelector('.e-venue').oninput = function(){ ex.venue = this.value; };
+      div.querySelector('.e-image-file').onchange = function(e){
+        var files = Array.prototype.slice.call(e.target.files);
+        if(!files.length) return;
+        var statEl = document.getElementById('stat-ex-' + idx);
+        statEl.textContent = '업로드 중...';
+        Promise.all(files.map(function(f){ return uploadFile(f, 'exhibitions/' + (ex.id||'ex')); }))
+          .then(function(paths){
+            ex.images = (ex.images||[]).concat(paths);
+            statEl.textContent = '업로드 완료';
+            renderExChips(idx, ex);
+          })
+          .catch(function(err){ statEl.textContent = '업로드 실패'; alert('업로드 실패: ' + err.message); });
+      };
+      div.querySelector('.remove-btn').onclick = function(){ state.exhibitions.splice(idx,1); renderExhibitions(); };
+      wrap.appendChild(div);
+      renderExChips(idx, ex);
+    });
+  }
+  function renderExChips(idx, ex){
+    var wrap = document.getElementById('chips-ex-' + idx);
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    (ex.images||[]).forEach(function(path, i){
+      var chip = document.createElement('span');
+      chip.className = 'img-chip';
+      chip.textContent = path.split('/').pop();
+      var rm = document.createElement('button');
+      rm.textContent = '✕';
+      rm.onclick = function(){ ex.images.splice(i,1); renderExChips(idx, ex); };
+      chip.appendChild(rm);
+      wrap.appendChild(chip);
+    });
+  }
+  function addExhibition(){
+    state.exhibitions.push({id:'ex-' + Date.now(), year:'', title:'', status:'', venue:'', images:[]});
+    renderExhibitions();
+  }
+
+  function renderTextItems(){
+    var wrap = document.getElementById('textItems');
+    wrap.innerHTML = '';
+    state.text.forEach(function(t, idx){
+      var div = document.createElement('div');
+      div.className = 'list-row';
+      div.innerHTML =
+        '<button class="remove-btn">삭제</button>' +
+        '<div class="grid2" style="grid-template-columns:1fr 100px;">' +
+          '<div class="field-row"><label>제목</label><input class="t-title" value="' + esc(t.title) + '"></div>' +
+          '<div class="field-row"><label>연도</label><input class="t-year" value="' + esc(t.year) + '"></div>' +
+        '</div>';
+      div.querySelector('.t-title').oninput = function(){ t.title = this.value; };
+      div.querySelector('.t-year').oninput = function(){ t.year = this.value; };
+      div.querySelector('.remove-btn').onclick = function(){ state.text.splice(idx,1); renderTextItems(); };
+      wrap.appendChild(div);
+    });
+  }
+  function addTextItem(){ state.text.push({title:'', year:''}); renderTextItems(); }
+
+  function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+  document.getElementById('tabs').addEventListener('click', function(e){
+    if(e.target.tagName !== 'BUTTON') return;
+    document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.remove('active'); });
+    e.target.classList.add('active');
+    var t = e.target.dataset.t;
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + t); });
+  });
+
+  document.getElementById('tabs').addEventListener('click', function(e){
+
+  var SITE_DATA_PATH = 'site/data.json';
+
+  function boot(){
+    if(state) return;
+    sb.storage.from(BUCKET).createSignedUrl(SITE_DATA_PATH, 60).then(function(res){
+      if(res.error){ state = DEFAULT_STATE; renderAll(); return; }
+      fetch(res.data.signedUrl).then(function(r){ return r.json(); }).then(function(json){
+        state = json;
+        YEARS.forEach(function(y){ if(!state.work[y]) state.work[y] = []; });
+        renderAll();
+      }).catch(function(){ state = DEFAULT_STATE; renderAll(); });
+    });
+  }
+
+  function saveToSupabase(){
+    var statusEl = document.getElementById('saveStatus');
+    statusEl.textContent = '저장 중...';
+    var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    sb.storage.from(BUCKET).upload(SITE_DATA_PATH, blob, { upsert:true, contentType:'application/json' })
+      .then(function(res){
+        if(res.error){ statusEl.textContent = ''; alert('저장 실패: ' + res.error.message); return; }
+        statusEl.textContent = '저장 완료 · ' + new Date().toLocaleTimeString('ko-KR');
+      });
+  }
+
+  function downloadBackup(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'data.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>
